@@ -36,7 +36,7 @@
 
 ## ⚠️ 重要提醒
 
-- **请勿用 ACL4SSR 上游原版覆盖 `ACL4SSR_Online_Full.ini`**，上游原版会把已删除的广告拦截/网易音乐等规则加回来，且部分策略组名与订阅端不匹配会导致 Clash 内核校验失败。原版备份保存在本地 `D:\SubOps\rules\ACL4SSR_Online_Full_原版备份.ini`（不入库）。
+- **请勿用 ACL4SSR 上游原版覆盖 `ACL4SSR_Online_Full.ini`**，上游原版会把已删除的广告拦截/网易音乐等规则加回来，且部分策略组名与订阅端不匹配会导致 Clash 内核校验失败。原版备份保存在本地 `D:\运维-订阅系统\rules\ACL4SSR_Online_Full_原版备份.ini`（不入库）。
 - 该配置被以下订阅服务引用，修改后无需重新部署订阅前端（转换时实时拉取）：
   - Global-Reach 主订阅（SUBCONFIG / SBSUBCONFIG 环境变量）
   - cf-workers-sub 备用订阅（SUBCONFIG 环境变量）
