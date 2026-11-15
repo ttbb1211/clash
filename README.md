@@ -31,7 +31,14 @@
 - 新增 🇭🇰 香港均衡 负载均衡组，🌍 国外媒体 默认走它
 - 该组放在策略组列表末尾（避免被其他组名匹配干扰）
 
-保留的分流组：🚀 节点选择、♻️ 自动选择（url-test 自动测速）、🇭🇰 香港均衡（load-balance 轮询）、📲 电报信息、📹 油管视频、📺 奈飞视频、💬 OpenAi、🌍 国外媒体、🎮 游戏平台、Ⓜ️ 微软服务、📢 谷歌FCM、🍎 苹果服务、🎯 全球直连、🛑 全球拦截、🍃 应用净化、🐟 漏网之鱼。
+后续补充（2026-11-15，提交 `5c5379a`）：
+
+- 新增 📱 TikTok 分流组，避开香港出口（TikTok 2020 年退出香港市场，香港 IP 被 302 到介绍页）
+- 规则插在 `ProxyMedia.list` 之前，确保 first-match-wins 先命中
+- 组定义沿用 💬 OpenAi 模式（`select` + 全部节点），组内可见全部节点、手动切换
+- Clash 与 sing-box 两份配置同步修改
+
+保留的分流组：🚀 节点选择、♻️ 自动选择（url-test 自动测速）、🇭🇰 香港均衡（load-balance 轮询）、📲 电报信息、📹 油管视频、📺 奈飞视频、💬 OpenAi、📱 TikTok、🌍 国外媒体、🎮 游戏平台、Ⓜ️ 微软服务、📢 谷歌FCM、🍎 苹果服务、🎯 全球直连、🛑 全球拦截、🍃 应用净化、🐟 漏网之鱼。
 
 #### 🇭🇰 香港均衡（负载均衡组）
 
@@ -47,7 +54,7 @@
 | 引用位置 | 🚀 节点选择 第 3 顺位；🌍 国外媒体 **第 1 顺位（默认走均衡）** |
 | 在配置中的位置 | 策略组列表**末尾** |
 
-对应配置行（`ACL4SSR_Online_Full.ini` 第 63 行）：
+对应配置行（`ACL4SSR_Online_Full.ini` 第 71 行）：
 
 ```ini
 custom_proxy_group=🇭🇰 香港均衡`load-balance`(?i)香港cdt`http://www.gstatic.com/generate_204`300`!!strategy=round-robin
@@ -61,6 +68,29 @@ custom_proxy_group=🇭🇰 香港均衡`load-balance`(?i)香港cdt`http://www.g
 >
 > ℹ️ `round-robin` 与 `consistent-hashing` 的差别：前者新连接轮流分配，单站点也能同时用上多个节点；后者按目标地址哈希，同一网站（youtube.com 等）的全部流量固定走一个节点，压不满多个节点。
 
+#### 📱 TikTok（避开香港出口）
+
+TikTok 于 2020 年退出香港市场，对香港 IP 硬性 302 到 `/about?lang=en` 介绍页，不返回内容流。2026-11-15 实测：
+
+| 节点 | 结果 |
+|---|---|
+| 🇭🇰 香港 cdt-1 | ❌ 302 → `/about`，title = `About \| TikTok` |
+| 🇸🇬 新加坡 | ✅ 正常首页 |
+| 🇰🇷 首尔 | ✅ 正常（首次遇 WAF 挑战页，浏览器自动过） |
+| 🇺🇸 圣何塞 | ✅ 正常首页 |
+
+组定义（`ACL4SSR_Online_Full.ini` 第 61 行）：
+
+```ini
+custom_proxy_group=📱 TikTok`select`[]🚀 节点选择`.*
+```
+
+默认值为 🚀 节点选择，该组第一顺位是 ♻️ 自动选择（url-test），香港延迟最低必然胜出，因此**首次使用需手动切到首尔/新加坡/圣何塞**，OpenClash 会记住选择。
+
+收录域名：`tiktokcdn`（KEYWORD）、`tiktok.com`、`tiktokcdn.com`、`tiktokv.com`、`tiktokv.us`、`musical.ly`、`byteoversea.com`。
+
+> ⚠️ `bytedance.com` / `bytedance.net` 是字节国内域名（抖音、西瓜），仍走 🎯 全球直连，**不要拉入本组**。
+
 ### ACL4SSR_Online_singbox.ini（sing-box 配置）
 
 - 针对 sing-box 1.12+ 移除了 GEOIP 规则（`GEOIP,CN` / `GEOIP,LAN`），避免导入报错
@@ -68,6 +98,7 @@ custom_proxy_group=🇭🇰 香港均衡`load-balance`(?i)香港cdt`http://www.g
 - 漏网之鱼默认走代理线路
 - **不含负载均衡组**：sing-box 内核只有 `selector` / `urltest` 两种策略出站，没有 `load-balance` 类型，均衡能力仅在 Clash / mihomo 侧生效
 - AI 分流组名为 `💬 Ai平台`（Clash 侧为 `💬 OpenAi`），两端命名不同属历史差异
+- 含 `📱 TikTok` 组（与 Clash 侧同名），规则同样插在 `ProxyMedia` 之前
 
 ## ⚠️ 重要提醒
 
@@ -75,7 +106,7 @@ custom_proxy_group=🇭🇰 香港均衡`load-balance`(?i)香港cdt`http://www.g
 - 该配置被以下订阅服务引用，修改后无需重新部署订阅前端（转换时实时拉取）：
   - Global-Reach 主订阅（SUBCONFIG / SBSUBCONFIG 环境变量）
   - cf-workers-sub 备用订阅（SUBCONFIG 环境变量）
-- **自建转换后端是定制编译版**（`subconverter:hot` 镜像，源码含「INI 末尾 `!!key=value` 段剥离」补丁），`ACL4SSR_Online_Full.ini` 第 63 行的 6 段写法依赖该补丁。换成官方原版镜像或按上游源码「修正」该行都会导致均衡组参数错位或策略丢失，详见上文「🇭🇰 香港均衡」小节的警告。
+- **自建转换后端是定制编译版**（`subconverter:hot` 镜像，源码含「INI 末尾 `!!key=value` 段剥离」补丁），`ACL4SSR_Online_Full.ini` 第 71 行的 6 段写法依赖该补丁。换成官方原版镜像或按上游源码「修正」该行都会导致均衡组参数错位或策略丢失，详见上文「🇭🇰 香港均衡」小节的警告。
 
 ## 引用地址
 
