@@ -38,6 +38,12 @@
 - 组定义沿用 💬 OpenAi 模式（`select` + 全部节点），组内可见全部节点、手动切换
 - Clash 与 sing-box 两份配置同步修改
 
+后续补充（2026-11-16）：
+
+- 📱 TikTok 组补 7 条域名：`ibytedtos.com`、`ipstatp.com`、`muscdn.com`、`tik-tokapi.com`（字节 CDN / 埋点 / 音乐 CDN / API 备用域）、`ttwstatic.com`（网页静态资源）、`tiktokcdn-eu.com`、`tiktokcdn-us.com`（后两个改为显式后缀，不再依赖 `tiktokcdn` 关键字兜底）
+- 起因：上游 `ProxyMedia.list` 把这几个域名归到 🌍 国外媒体，新组未覆盖，导致落到香港
+- 行号连带更新：香港均衡 71 → 78，📱 TikTok 组定义 61 → 68
+
 保留的分流组：🚀 节点选择、♻️ 自动选择（url-test 自动测速）、🇭🇰 香港均衡（load-balance 轮询）、📲 电报信息、📹 油管视频、📺 奈飞视频、💬 OpenAi、📱 TikTok、🌍 国外媒体、🎮 游戏平台、Ⓜ️ 微软服务、📢 谷歌FCM、🍎 苹果服务、🎯 全球直连、🛑 全球拦截、🍃 应用净化、🐟 漏网之鱼。
 
 #### 🇭🇰 香港均衡（负载均衡组）
@@ -54,7 +60,7 @@
 | 引用位置 | 🚀 节点选择 第 3 顺位；🌍 国外媒体 **第 1 顺位（默认走均衡）** |
 | 在配置中的位置 | 策略组列表**末尾** |
 
-对应配置行（`ACL4SSR_Online_Full.ini` 第 71 行）：
+对应配置行（`ACL4SSR_Online_Full.ini` 第 78 行）：
 
 ```ini
 custom_proxy_group=🇭🇰 香港均衡`load-balance`(?i)香港cdt`http://www.gstatic.com/generate_204`300`!!strategy=round-robin
@@ -79,7 +85,7 @@ TikTok 于 2020 年退出香港市场，对香港 IP 硬性 302 到 `/about?lang
 | 🇰🇷 首尔 | ✅ 正常（首次遇 WAF 挑战页，浏览器自动过） |
 | 🇺🇸 圣何塞 | ✅ 正常首页 |
 
-组定义（`ACL4SSR_Online_Full.ini` 第 61 行）：
+组定义（`ACL4SSR_Online_Full.ini` 第 68 行）：
 
 ```ini
 custom_proxy_group=📱 TikTok`select`[]🚀 节点选择`.*
@@ -87,7 +93,20 @@ custom_proxy_group=📱 TikTok`select`[]🚀 节点选择`.*
 
 默认值为 🚀 节点选择，该组第一顺位是 ♻️ 自动选择（url-test），香港延迟最低必然胜出，因此**首次使用需手动切到首尔/新加坡/圣何塞**，OpenClash 会记住选择。
 
-收录域名：`tiktokcdn`（KEYWORD）、`tiktok.com`、`tiktokcdn.com`、`tiktokv.com`、`tiktokv.us`、`musical.ly`、`byteoversea.com`。
+收录域名（14 条）：
+
+| 类型 | 域名 | 说明 |
+|---|---|---|
+| KEYWORD | `tiktokcdn` | 兜底，覆盖 `tiktokcdn-eu.com` / `tiktokcdn-us.com` 等未列举的 CDN 变体 |
+| SUFFIX | `tiktok.com` | 主站 |
+| SUFFIX | `tiktokv.com` / `tiktokv.us` | App API |
+| SUFFIX | `tiktokcdn.com` / `tiktokcdn-eu.com` / `tiktokcdn-us.com` | 视频 CDN（后两个显式列出，不依赖 KEYWORD 兜底） |
+| SUFFIX | `byteoversea.com` | 海外字节 |
+| SUFFIX | `ibytedtos.com` / `muscdn.com` / `ipstatp.com` / `tik-tokapi.com` | 字节 CDN、音乐 CDN、上报埋点、API 备用域 |
+| SUFFIX | `ttwstatic.com` | 网页版静态资源 CDN |
+| SUFFIX | `musical.ly` | 旧域名 |
+
+> ℹ️ `ibytedtos.com` / `muscdn.com` / `ipstatp.com` / `tik-tokapi.com` 四个顶级域实测在公共 DNS 均无 A 记录，常见子域也解析不到，当前加进来属于规则完整性储备，不影响现有体验。
 
 > ⚠️ `bytedance.com` / `bytedance.net` 是字节国内域名（抖音、西瓜），仍走 🎯 全球直连，**不要拉入本组**。
 
@@ -106,7 +125,7 @@ custom_proxy_group=📱 TikTok`select`[]🚀 节点选择`.*
 - 该配置被以下订阅服务引用，修改后无需重新部署订阅前端（转换时实时拉取）：
   - Global-Reach 主订阅（SUBCONFIG / SBSUBCONFIG 环境变量）
   - cf-workers-sub 备用订阅（SUBCONFIG 环境变量）
-- **自建转换后端是定制编译版**（`subconverter:hot` 镜像，源码含「INI 末尾 `!!key=value` 段剥离」补丁），`ACL4SSR_Online_Full.ini` 第 71 行的 6 段写法依赖该补丁。换成官方原版镜像或按上游源码「修正」该行都会导致均衡组参数错位或策略丢失，详见上文「🇭🇰 香港均衡」小节的警告。
+- **自建转换后端是定制编译版**（`subconverter:hot` 镜像，源码含「INI 末尾 `!!key=value` 段剥离」补丁），`ACL4SSR_Online_Full.ini` 第 78 行的 6 段写法依赖该补丁。换成官方原版镜像或按上游源码「修正」该行都会导致均衡组参数错位或策略丢失，详见上文「🇭🇰 香港均衡」小节的警告。
 
 ## 引用地址
 
